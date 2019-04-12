@@ -1,0 +1,53 @@
+﻿
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Login</title>
+
+    <link href="~/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="~/css/LoginStyle.css" rel="stylesheet" />
+    <link href="~/css/site.css" rel="stylesheet" />
+</head>
+<body>
+
+    <div class="wrapper">
+        <div class="form-signin">
+            <h2 class="form-signin-heading">Login</h2>
+            <input type="text" class="form-control" id="UserName" placeholder="Username" />
+            <input type="password" class="form-control" id="Password" placeholder="Password" />
+            <button class="btn btn-lg btn-primary btn-block" type="button" onclick="GetLogin()">Login</button>
+        </div>
+    </div>
+</body>
+</html>
+<script src="~/lib/jquery/dist/jquery.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.js"></script>
+<script type="text/javascript">
+
+    function GetLogin() {
+      $.ajax({
+          type: "POST",
+          url: '@Url.Action("LoginApp", "Login")',
+          data: {
+              UserName: $('#UserName').val(),
+              Password: $('#Password').val()
+          },
+          error: function (result) {
+            alert("There is a Problem, Try Again!");
+          },
+          success: function (result) {
+            if (result.status == true) {
+              window.location.href = '@Url.Action("Index", "Home")';
+            }
+            else {
+              alert(result.message);
+            }
+         }
+    });
+  }
+
+</script>

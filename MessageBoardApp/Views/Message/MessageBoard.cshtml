@@ -1,0 +1,189 @@
+﻿@using Microsoft.AspNetCore.Http;
+@{
+    ViewData["Title"] = "Message Board";
+}
+
+<div class="col-md-12 topSpacePanel" ng-app="MessageBrdModule">
+    <div class="col-md-offset-3">
+        <div class="panel panel-default" style="width:500px;" ng-controller="MessageController">
+            <div class="panel-heading text-center"><h4>Message Board</h4></div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <textarea id="txtMessage" ng-model="MainPostData.PostedMes" class="form-control" placeholder="Say Somthing Here.."></textarea>
+                    </div>
+                </div>
+                <div class="row" style="margin-top:10px;">
+                    <div class="col-md-12">
+                        <div class="text-right">
+                            <button id="btnPostMainMes" class="btn btn-primary" ng-click="postMainMessage()">Post</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="margin-top:10px;" ng-repeat="mesDetails in AllDbMessages track by $index">
+                    <div class="col-md-12 panel panel-default" style="margin-left:15px;width:470px;">
+                        <div class="col-md-6">
+                            <label>{{mesDetails.logerFullName}}</label>
+                        </div>
+                        <div class="clearfix"></div>
+                        <div class="col-md-12">
+                            <span>{{mesDetails.postedMessages}}</span>
+                        </div>
+                    </div>
+                    <div class=" col-md-12 panel panel-default" style="margin-left:15px;width:470px; margin-top:-20px;">
+                        <div class="col-md-4" ng-if="mesDetails.userActivity == null || mesDetails.userActivity.isLike == false ">
+                            <a id="linkLike_{{mesDetails.messageId}}" ng-click="clickForLike(mesDetails.messageId,mesDetails.loginUserId)" style="cursor:pointer;color:dimgray;"><span>{{mesDetails.likeCount}}</span><i class="glyphicon glyphicon-thumbs-up"></i>Like</a>
+                        </div>
+                        <div class="col-md-4" ng-if="mesDetails.userActivity.isLike == true">
+                            <a id="linkLike_{{mesDetails.messageId}}" ng-click="clickForLike(mesDetails.messageId,mesDetails.loginUserId)" style="cursor:pointer;color:dodgerblue;"><span>{{mesDetails.likeCount}}</span><i class="glyphicon glyphicon-thumbs-up"></i>Like</a>
+                        </div>
+                        <div class="col-md-3">
+                            <a  id="lnkComment_{{mesDetails.messageId}}" ng-click="expanded = !expanded" expand data-target="{{$index}}" style="cursor:pointer;color:dimgray;"><i class="glyphicon glyphicon-comment"></i>Comment</a>
+                        </div>
+                        <div class="row" ng-show="expanded" id="{{$index}}">
+                            <div ng-repeat="getComment in mesDetails.userCommentsAct" id="dvDispPostCmnt_{{getComment.activityId}}" class="col-md-12 panel panel-default" style="margin-left:15px;width:400px;">
+                                <div class="col-md-6">
+                                    <label id="lblPostedUserName_{{getComment.activityId}}">{{getComment.commentedUserName}}</label>
+                                </div>
+                                <div class="clearfix"></div>
+                                <div class="col-md-12" style="margin-bottom:10px;">
+                                    <span style="background-color:aliceblue;" id="spShowPostedCm_{{getComment.activityId}}">{{getComment.postedComments}} </span>
+                                </div>
+                            </div>
+                            <div class="col-md-12 panel panel-default" id="dvWritePostCmnt_{{mesDetails.messageId}}" style="margin-left:15px;width:400px;">
+                                <div class="col-md-6">
+                                    <label>@Context.Session.GetString("FullName")</label>
+                                </div>
+                                <div class="clearfix"></div>
+                                <div class="col-md-9" style="margin-bottom:10px;">
+                                    <textarea id="txtForComment_{{mesDetails.messageId}}" class="form-control clrTextArea"></textarea>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-right">
+                                        <button id="btnPostCmnt" class="btn btn-primary" ng-click="btnPostComments(mesDetails.messageId,mesDetails.loginUserId)">Share</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+
+<script type="text/javascript">
+
+        var app = angular.module("MessageBrdModule", []);
+        app.controller("MessageController", function ($scope, MessageBoardService) {
+
+            $scope.postedMessage = "";
+            $scope.ifPostMess = false;
+            $scope.lblShowComment = "";
+            $scope.AllComments = {};
+            $scope.MainPostData = {};
+            $scope.AllDbMessages = {};
+            $scope.MainPostData.LoginUserId = '@Context.Session.GetString("UserId")';
+            $scope.MsgWiseLikeData = {};
+            $scope.MsgWiseComments = {};
+
+            GetMainPostedMess();
+
+            $scope.postMainMessage = function () {
+                $scope.ifPostMess = true;
+                $.ajax({
+                type: "POST",
+                url: '@Url.Action("SaveMainPostMes", "Message")',
+                data: $scope.MainPostData,
+                    success: function (result) {
+                        if (result == "DataSaved") {
+                            $scope.MainPostData = {};
+                            $("#txtMessage").val('');
+                            alert("Data Saved Successfully");
+
+                            GetMainPostedMess();
+                        }
+                        else {
+                            alert("There is something error");
+                        }
+                    }
+                });
+            }
+
+            function GetMainPostedMess() {
+                MessageBoardService.GetAllMainMessages().then(function (p1) {
+                    if (p1.data != null) {
+                        $scope.AllDbMessages = p1.data;
+                   }
+                });
+            }
+
+            $scope.clickForLike = function (getMesId,getPostedUserId) {
+                $scope.MsgWiseLikeData.LoginUserId = '@Context.Session.GetString("UserId")';
+                $scope.MsgWiseLikeData.PostedUserId = getPostedUserId;
+                $scope.MsgWiseLikeData.PostedMessageId = getMesId;
+
+                MessageBoardService.SendLikeUpdateOnClick($scope.MsgWiseLikeData).then(function (userActiveData) {
+                    if (userActiveData.activityId != 0) {
+                        if (userActiveData.isLike == true) {
+                            $("#linkLike_" + getMesId).css({ 'color': 'dodgerblue' });
+                        }
+                        else if (userActiveData.isLike == false) {
+                            $("#linkLike_" + getMesId).css({ 'color': 'dimgray' });
+                        }
+                        GetMainPostedMess();
+                        $scope.MsgWiseLikeData = {};
+                    }
+                });
+            }
+
+            $scope.btnPostComments = function (MesId,getCmntPostedUserId) {
+                $scope.MsgWiseComments.LoginUserId = '@Context.Session.GetString("UserId")';
+                $scope.MsgWiseComments.PostedUserId = getCmntPostedUserId;
+                $scope.MsgWiseComments.PostedMessageId = MesId;
+                $scope.MsgWiseComments.PostedComments = $("#txtForComment_" + MesId).val();
+
+                MessageBoardService.PostCommentByUsers($scope.MsgWiseComments).then(function (userCmntData) {
+                    if (userCmntData.activityId != 0) {
+                        if (userCmntData.postedComments != null) {
+                            GetMainPostedMess();
+                            $(".clrTextArea").val('');
+                            $scope.MsgWiseComments = {};
+                        }
+                    }
+                });
+            }
+        });
+
+        app.service('MessageBoardService', function ($http) {
+            this.GetAllMainMessages = function () {
+                var request = $http.get("/Message/GetAllMainPostMes");
+                return request;
+            }
+            this.SendLikeUpdateOnClick = function (GetLikeData) {
+                var request =   $.ajax({
+                type: "POST",
+                url: '@Url.Action("SaveLikeUpdated", "Message")',
+                data: GetLikeData
+                });
+                return request;
+            }
+
+            this.PostCommentByUsers = function (GetCommentData) {
+                var request =   $.ajax({
+                type: "POST",
+                url: '@Url.Action("SavePostedComments", "Message")',
+                    data: GetCommentData
+                });
+                return request;
+            }
+
+        });
+
+</script>
+}
+
